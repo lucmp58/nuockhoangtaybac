@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Nước khoáng Tây Bắc</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- MapLibre CDN -->
+  <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+
+  <!-- CSS giao diện -->
+  <link rel="stylesheet" href="css/popup.css" />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      display: flex;
+      justify-content: center; /* Căn giữa trang */
+      align-items: center; /* Căn giữa trang theo chiều dọc */
+      overflow: hidden;
+      background-color: #f4f4f4;
+    }
+
+    /* Wrapper chính để giới hạn chiều rộng */
+    .content-wrapper {
+      display: flex;
+      width: 75%; /* Website chiếm 3/4 màn hình */
+      height: 90%; /* Chiều cao của website */
+      background-color: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      flex-direction: column; /* Cho phép hiển thị các phần tử theo chiều dọc */
+      position: relative; /* Để layer-controls nằm bên trong */
+    }
+
+    /* Banner */
+    .banner {
+      background-image: url('https://t3.ftcdn.net/jpg/08/27/45/96/360_F_827459634_89T9xbsSaQj7kxHVEHF1TgflrO4tWqsK.jpg');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      text-align: center;
+      padding: 70px 30px;
+      font-size: 28px;
+      font-weight: bold;
+      position: relative;
+    }
+
+    .banner img {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px;
+      height: auto;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 20%;
+      background: #f4f6f7;
+      padding: 20px;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .sidebar h2 {
+      font-size: 18px;
+      margin-bottom: 16px;
+      color: #2c3e50;
+    }
+
+    .search-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .search-box input {
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    .search-box button {
+      background: #2980b9;
+      color: white;
+      padding: 10px;
+      font-size: 15px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .search-box button:hover {
+      background: #1f6391;
+    }
+
+    /* Map area */
+    #map {
+      width: 80%;
+      height: 100%;
+    }
+
+    /* Layer controls nằm bên trong content-wrapper */
+    .layer-controls {
+      position: absolute;
+          bottom: 20px;
+          right: 20px;
+          background-color: rgba(255, 255, 255, 0.8);
+          padding: 15px;
+          border-radius: 8px;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          max-height: 80%;
+          overflow-y: auto;
+          font-weight: bold; /* Làm đậm tất cả chữ trong layer-controls */
+          }
+
+          .layer-controls label {
+            display: block;
+            margin-bottom: 4px; /* Giảm khoảng cách giữa các label */
+            font-weight: bold;
+          }
+
+    .layer-controls input {
+            margin-right: 10px; /* Khoảng cách giữa checkbox và văn bản */
+        }
+
+    /* Có thể điều chỉnh khoảng cách của các checkbox riêng biệt */
+    .layer-controls input[type="checkbox"] {
+            margin-top: 0; /* Đảm bảo không có khoảng cách thừa phía trên checkbox */
+          }
+  </style>
+</head>
+<body>
+  <!-- Content wrapper -->
+  <div class="content-wrapper">
+    <!-- Banner section -->
+    <div class="banner">
+      
+    </div>
+
+    <!-- Main container with sidebar and map -->
+    <div style="display: flex; height: 100%;">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <h2>Tìm nguồn nước khoáng</h2>
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="Nhập Số hiệu nguồn NKN..." />
+          <button onclick="searchNguon()">Tìm kiếm</button>
+        </div>
+        <!-- Kết quả tìm kiếm -->
+        <div id="search-result" style="margin-top: 16px; display: none;">
+          <div style="color: green; font-weight: bold; margin-bottom: 6px;">✅ Đã tìm thấy!</div>
+          <button id="detailBtn" style="
+            padding: 8px 10px;
+            font-size: 14px;
+            background: #27ae60;
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+          ">Thông tin chi tiết</button>
+    
+          <div id="infoBox" style="margin-top: 10px; display: none;">
+            <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+              <tbody id="infoTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map Area -->
+      <div id="map"></div>
+    </div>
+
+    <!-- Layer Controls (Bên trong giao diện) -->
+    <div class="layer-controls">
+      <strong>Bật / tắt các lớp:</strong><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="road" checked> Đường giao thông</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="building" checked> Khu dân cư</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="water" checked> Thủy hệ</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="landcover" checked> Lớp phủ</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="infrastructure-layer" checked> Công trình khác</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="magma-layer" checked> Các khối Magma ẩn</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="line-demo-layer" checked> Đứt gãy địa chất</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="diemnn-layer" checked> Điểm NKN</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="biengioi-layer" checked> Đường biên giới</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="ranhgioidc-layer" checked> Ranh giới địa chất</label><br>
+      <label><input type="checkbox" class="layer-toggle" data-layer="nendc-layer" checked> Nền địa chất</label><br>
+    </div>
+  </div>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
